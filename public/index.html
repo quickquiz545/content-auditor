@@ -1,0 +1,893 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Content Auditor</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --surface: #ffffff;
+      --surface-alt: #fbfcfd;
+      --ink: #1d232b;
+      --muted: #607083;
+      --line: #d9e0e7;
+      --accent: #0f766e;
+      --accent-2: #285f9f;
+      --high: #b42318;
+      --medium: #a15c07;
+      --low: #3b6d2a;
+      --soft-high: #fff0ee;
+      --soft-medium: #fff7e8;
+      --soft-low: #eef8ec;
+      --focus: 0 0 0 3px rgba(15, 118, 110, 0.18);
+      --shadow: 0 10px 24px rgba(29, 35, 43, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      letter-spacing: 0;
+    }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 22px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .mark {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      background: #163a5f;
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+    }
+
+    h1 {
+      font-size: 18px;
+      line-height: 1.2;
+      margin: 0;
+      white-space: nowrap;
+    }
+
+    .source {
+      color: var(--muted);
+      font-size: 13px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 28px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 5px 9px;
+      color: #364454;
+      background: var(--surface-alt);
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(340px, 460px) minmax(0, 1fr);
+      gap: 18px;
+      padding: 18px;
+      max-width: 1480px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      min-width: 0;
+    }
+
+    .input-panel {
+      padding: 18px;
+      align-self: start;
+      position: sticky;
+      top: 18px;
+    }
+
+    .results-panel {
+      min-height: calc(100vh - 88px);
+      overflow: hidden;
+    }
+
+    label {
+      display: block;
+      font-weight: 700;
+      font-size: 13px;
+      margin: 0 0 7px;
+    }
+
+    input[type="text"], textarea, select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 10px 11px;
+      font: inherit;
+      color: var(--ink);
+      background: #fff;
+    }
+
+    input[type="text"]:focus, textarea:focus, select:focus, button:focus-visible {
+      outline: none;
+      box-shadow: var(--focus);
+      border-color: var(--accent);
+    }
+
+    textarea {
+      min-height: 260px;
+      resize: vertical;
+      line-height: 1.45;
+    }
+
+    .field {
+      margin-bottom: 14px;
+    }
+
+    .file-drop {
+      border: 1px dashed #aab7c4;
+      background: var(--surface-alt);
+      border-radius: 8px;
+      padding: 14px;
+    }
+
+    .file-drop input {
+      width: 100%;
+    }
+
+    .help {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-top: 16px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 6px;
+      padding: 10px 14px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      min-height: 40px;
+    }
+
+    .primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .secondary {
+      background: #e9eef4;
+      color: #25313d;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: progress;
+    }
+
+    .results-head {
+      display: grid;
+      grid-template-columns: minmax(150px, 210px) 1fr;
+      gap: 16px;
+      padding: 18px;
+      border-bottom: 1px solid var(--line);
+      background: var(--surface-alt);
+    }
+
+    .score-wrap {
+      display: grid;
+      justify-items: center;
+      align-content: start;
+      gap: 8px;
+    }
+
+    .score {
+      width: 112px;
+      height: 112px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: conic-gradient(var(--accent) calc(var(--score, 0) * 1%), #e5eaf0 0);
+      position: relative;
+    }
+
+    .score::after {
+      content: "";
+      width: 82px;
+      height: 82px;
+      border-radius: 50%;
+      background: var(--surface);
+      position: absolute;
+    }
+
+    .score span {
+      position: relative;
+      z-index: 1;
+      font-size: 28px;
+      font-weight: 800;
+    }
+
+    .score-label {
+      color: var(--muted);
+      font-size: 12px;
+      text-align: center;
+    }
+
+    .score-note {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+      text-align: center;
+      max-width: 170px;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+      gap: 8px;
+      align-content: start;
+    }
+
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 9px;
+      background: #fff;
+      min-height: 64px;
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 20px;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .metric span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .metric.is-alert strong { color: var(--high); }
+    .metric.is-ok strong { color: var(--accent); }
+
+    .tabs {
+      display: flex;
+      gap: 4px;
+      padding: 12px 18px 0;
+      border-bottom: 1px solid var(--line);
+      background: var(--surface);
+      overflow-x: auto;
+    }
+
+    .tab {
+      background: transparent;
+      color: var(--muted);
+      border-bottom: 3px solid transparent;
+      border-radius: 0;
+      padding: 10px 11px;
+      min-height: 38px;
+    }
+
+    .tab.active {
+      color: var(--ink);
+      border-bottom-color: var(--accent-2);
+    }
+
+    .result-tools {
+      display: grid;
+      grid-template-columns: minmax(160px, 1.2fr) repeat(2, minmax(150px, 0.7fr)) auto;
+      gap: 10px;
+      align-items: end;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--line);
+      background: var(--surface);
+    }
+
+    .tool-field label {
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+    }
+
+    .issue-count {
+      color: var(--muted);
+      font-size: 13px;
+      text-align: right;
+      min-width: 116px;
+      padding-bottom: 10px;
+    }
+
+    .content {
+      padding: 18px;
+    }
+
+    .empty {
+      color: var(--muted);
+      line-height: 1.5;
+      max-width: 720px;
+    }
+
+    .issue-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .insight-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .insight {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 11px;
+      background: #fff;
+      min-height: 68px;
+    }
+
+    .insight strong {
+      display: block;
+      font-size: 18px;
+      margin-bottom: 5px;
+    }
+
+    .insight span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .issue {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .issue-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 13px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .badge {
+      font-size: 11px;
+      line-height: 1;
+      font-weight: 800;
+      text-transform: uppercase;
+      padding: 6px 7px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .badge.high { color: var(--high); background: var(--soft-high); }
+    .badge.medium { color: var(--medium); background: var(--soft-medium); }
+    .badge.low { color: var(--low); background: var(--soft-low); }
+
+    .issue-title {
+      min-width: 0;
+      font-weight: 800;
+      overflow-wrap: anywhere;
+    }
+
+    .line {
+      margin-left: auto;
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .issue-body {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(220px, 0.8fr);
+      gap: 12px;
+      padding: 13px;
+      line-height: 1.45;
+    }
+
+    .message {
+      margin: 0 0 9px;
+    }
+
+    .suggestion {
+      margin: 0;
+      color: #2d4f42;
+    }
+
+    .evidence {
+      background: #f5f7f9;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 10px;
+      color: #354252;
+      font-size: 13px;
+      overflow-wrap: anywhere;
+    }
+
+    .guidelines {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .guideline {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      background: #fff;
+      line-height: 1.4;
+    }
+
+    .empty-state {
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      padding: 18px;
+      background: var(--surface-alt);
+    }
+
+    .status {
+      color: var(--muted);
+      font-size: 13px;
+      min-height: 18px;
+    }
+
+    .error {
+      color: var(--high);
+      font-weight: 700;
+    }
+
+    @media (max-width: 960px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+
+      .input-panel {
+        position: static;
+      }
+
+      .results-head {
+        grid-template-columns: 1fr;
+      }
+
+      .metrics, .guidelines {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .result-tools {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .issue-count {
+        grid-column: 1 / -1;
+        text-align: left;
+        padding-bottom: 0;
+      }
+
+      .issue-body {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 560px) {
+      header {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .header-actions {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      main {
+        padding: 10px;
+      }
+
+      .metrics, .guidelines, .result-tools {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="brand">
+        <div class="mark">CA</div>
+        <div>
+          <h1>Content Auditor</h1>
+          <div class="source">Rules loaded from Guidelines for Authors.docx</div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <span class="pill">Rule pack v1</span>
+        <div class="source">Paste content, upload a file, then run an evidence-based audit.</div>
+      </div>
+    </header>
+
+    <main>
+      <section class="panel input-panel">
+        <form id="auditForm">
+          <div class="field">
+            <label for="centralEntity">Central entity</label>
+            <input id="centralEntity" name="centralEntity" type="text" placeholder="Example: Laser cutting" />
+            <div class="help">Used to check whether each section stays focused on the main entity.</div>
+          </div>
+
+          <div class="field">
+            <label for="searchIntent">Central search intent</label>
+            <input id="searchIntent" name="searchIntent" type="text" placeholder="Example: Does laser cutting produce clean edges?" />
+            <div class="help">Used to check whether the intro answers the core user intent.</div>
+          </div>
+
+          <div class="field">
+            <label for="contentFile">Upload content file</label>
+            <div class="file-drop">
+              <input id="contentFile" name="contentFile" type="file" accept=".txt,.md,.markdown,.docx,.pdf,.html,.htm,.csv,.rtf" />
+              <div class="help">Supported: TXT, Markdown, DOCX, PDF, HTML, CSV, RTF.</div>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="contentText">Or paste content</label>
+            <textarea id="contentText" name="contentText" placeholder="Paste the article or section draft here..."></textarea>
+          </div>
+
+          <div class="actions">
+            <button class="primary" id="runAudit" type="submit">Run audit</button>
+            <button class="secondary" id="clearForm" type="button">Clear</button>
+          </div>
+          <p class="status" id="status"></p>
+        </form>
+      </section>
+
+      <section class="panel results-panel">
+        <div class="results-head">
+          <div class="score-wrap">
+            <div class="score" id="scoreDial" style="--score: 0"><span id="scoreValue">--</span></div>
+            <div class="score-label">Guideline fit score</div>
+            <div class="score-note" id="scoreNote">Waiting for content.</div>
+          </div>
+          <div class="metrics" id="metrics"></div>
+        </div>
+
+        <div class="tabs" id="tabs" aria-label="Issue severity filters">
+          <button class="tab active" type="button" data-filter="all">All issues</button>
+          <button class="tab" type="button" data-filter="high">High</button>
+          <button class="tab" type="button" data-filter="medium">Medium</button>
+          <button class="tab" type="button" data-filter="low">Low</button>
+          <button class="tab" type="button" data-filter="guidelines">Guidelines</button>
+        </div>
+
+        <div class="result-tools" id="resultTools">
+          <div class="tool-field">
+            <label for="issueSearch">Search findings</label>
+            <input id="issueSearch" type="text" placeholder="Rule, category, suggestion, evidence..." />
+          </div>
+          <div class="tool-field">
+            <label for="categoryFilter">Category</label>
+            <select id="categoryFilter">
+              <option value="all">All categories</option>
+            </select>
+          </div>
+          <div class="tool-field">
+            <label for="sortIssues">Sort by</label>
+            <select id="sortIssues">
+              <option value="severity">Severity</option>
+              <option value="category">Category</option>
+              <option value="line">Line</option>
+            </select>
+          </div>
+          <div class="issue-count" id="issueCount">No audit yet</div>
+        </div>
+
+        <div class="content" id="results">
+          <div class="empty-state">
+            <p class="empty">Run an audit to see prioritized guideline issues, evidence snippets, and rewrite suggestions.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const form = document.querySelector("#auditForm");
+    const statusEl = document.querySelector("#status");
+    const resultsEl = document.querySelector("#results");
+    const metricsEl = document.querySelector("#metrics");
+    const scoreDial = document.querySelector("#scoreDial");
+    const scoreValue = document.querySelector("#scoreValue");
+    const scoreNote = document.querySelector("#scoreNote");
+    const tabs = document.querySelector("#tabs");
+    const runButton = document.querySelector("#runAudit");
+    const issueSearch = document.querySelector("#issueSearch");
+    const categoryFilter = document.querySelector("#categoryFilter");
+    const sortIssues = document.querySelector("#sortIssues");
+    const issueCount = document.querySelector("#issueCount");
+    let lastResult = null;
+    const state = {
+      severity: "all",
+      query: "",
+      category: "all",
+      sort: "severity",
+    };
+
+    const escapeHtml = (value) => String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+
+    function metric(label, value, className = "") {
+      return `<div class="metric ${className}"><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span></div>`;
+    }
+
+    function renderMetrics(result) {
+      const s = result.summary;
+      const d = result.detail_metrics;
+      metricsEl.innerHTML = [
+        metric("Words", s.words),
+        metric("Sentences", s.sentences),
+        metric("Avg sentence", s.average_sentence_words),
+        metric("High", s.high, s.high ? "is-alert" : "is-ok"),
+        metric("Medium", s.medium),
+        metric("Low", s.low),
+        metric("Research", d.research_mentions),
+        metric("Numbers", d.numbers),
+        metric("Units", d.units),
+      ].join("");
+    }
+
+    function scoreMessage(score) {
+      if (score >= 85) return "Strong fit. Review remaining details before publishing.";
+      if (score >= 65) return "Mostly aligned. Fix medium and high findings next.";
+      if (score >= 40) return "Needs revision. Start with high-severity findings.";
+      return "Major rewrite needed. Resolve high-severity findings first.";
+    }
+
+    function resetFilters() {
+      state.severity = "all";
+      state.query = "";
+      state.category = "all";
+      state.sort = "severity";
+      issueSearch.value = "";
+      categoryFilter.innerHTML = `<option value="all">All categories</option>`;
+      sortIssues.value = "severity";
+      for (const tab of tabs.querySelectorAll(".tab")) {
+        tab.classList.toggle("active", tab.dataset.filter === "all");
+      }
+      issueCount.textContent = "No audit yet";
+    }
+
+    function renderCategoryOptions(result) {
+      const categories = [...new Set(result.issues.map((issue) => issue.category))].sort();
+      categoryFilter.innerHTML = [
+        `<option value="all">All categories</option>`,
+        ...categories.map((category) => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`),
+      ].join("");
+      categoryFilter.value = state.category;
+    }
+
+    function issueMatchesQuery(issue, query) {
+      if (!query) return true;
+      const haystack = [
+        issue.severity,
+        issue.category,
+        issue.rule,
+        issue.message,
+        issue.suggestion,
+        issue.evidence,
+        issue.line,
+      ].join(" ").toLowerCase();
+      return haystack.includes(query);
+    }
+
+    function getFilteredIssues(result) {
+      const severityRank = { high: 0, medium: 1, low: 2 };
+      const query = state.query.trim().toLowerCase();
+      const issues = result.issues
+        .filter((issue) => state.severity === "all" || issue.severity === state.severity)
+        .filter((issue) => state.category === "all" || issue.category === state.category)
+        .filter((issue) => issueMatchesQuery(issue, query));
+
+      return issues.sort((a, b) => {
+        if (state.sort === "category") {
+          return a.category.localeCompare(b.category) || severityRank[a.severity] - severityRank[b.severity];
+        }
+        if (state.sort === "line") {
+          return (a.line || 999999) - (b.line || 999999) || severityRank[a.severity] - severityRank[b.severity];
+        }
+        return severityRank[a.severity] - severityRank[b.severity] || (a.line || 999999) - (b.line || 999999);
+      });
+    }
+
+    function renderInsightRow(result) {
+      const d = result.detail_metrics;
+      return `<div class="insight-row">
+        <div class="insight"><strong>${escapeHtml(result.summary.sections)}</strong><span>Detected sections</span></div>
+        <div class="insight"><strong>${escapeHtml(d.examples)}</strong><span>Example signals</span></div>
+        <div class="insight"><strong>${escapeHtml(d.percentages)}</strong><span>Percentages</span></div>
+        <div class="insight"><strong>${escapeHtml(d.years)}</strong><span>Year references</span></div>
+      </div>`;
+    }
+
+    function renderIssues(result) {
+      if (state.severity === "guidelines") {
+        issueCount.textContent = `${result.guidelines.length} rules shown`;
+        resultsEl.innerHTML = `
+          <p class="empty">The audit rules are derived from the attached author guidelines.</p>
+          <div class="guidelines">
+            ${result.guidelines.map((item) => `<div class="guideline">${escapeHtml(item)}</div>`).join("")}
+          </div>
+        `;
+        return;
+      }
+
+      const issues = getFilteredIssues(result);
+      issueCount.textContent = `${issues.length} of ${result.issues.length} findings`;
+      if (!issues.length) {
+        resultsEl.innerHTML = `
+          ${renderInsightRow(result)}
+          <div class="empty-state">
+            <p class="empty">No findings match the current filters.</p>
+          </div>
+        `;
+        return;
+      }
+
+      resultsEl.innerHTML = `${renderInsightRow(result)}<div class="issue-list">
+        ${issues.map((issue) => `
+          <article class="issue">
+            <div class="issue-head">
+              <span class="badge ${escapeHtml(issue.severity)}">${escapeHtml(issue.severity)}</span>
+              <div class="issue-title">${escapeHtml(issue.category)}: ${escapeHtml(issue.rule)}</div>
+              ${issue.line ? `<div class="line">Line ${escapeHtml(issue.line)}</div>` : ""}
+            </div>
+            <div class="issue-body">
+              <div>
+                <p class="message">${escapeHtml(issue.message)}</p>
+                <p class="suggestion">${escapeHtml(issue.suggestion)}</p>
+              </div>
+              <div class="evidence">${escapeHtml(issue.evidence)}</div>
+            </div>
+          </article>
+        `).join("")}
+      </div>`;
+    }
+
+    function renderResult(result) {
+      lastResult = result;
+      scoreDial.style.setProperty("--score", result.score);
+      scoreValue.textContent = result.score;
+      scoreNote.textContent = scoreMessage(result.score);
+      renderMetrics(result);
+      renderCategoryOptions(result);
+      renderIssues(result);
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      statusEl.textContent = "Running audit...";
+      statusEl.className = "status";
+      runButton.disabled = true;
+
+      try {
+        const response = await fetch("/audit", {
+          method: "POST",
+          body: new FormData(form),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || "The audit failed.");
+        }
+        statusEl.textContent = "Audit complete.";
+        resetFilters();
+        renderResult(data);
+      } catch (error) {
+        statusEl.textContent = error.message;
+        statusEl.className = "status error";
+      } finally {
+        runButton.disabled = false;
+      }
+    });
+
+    document.querySelector("#clearForm").addEventListener("click", () => {
+      form.reset();
+      statusEl.textContent = "";
+      lastResult = null;
+      scoreDial.style.setProperty("--score", 0);
+      scoreValue.textContent = "--";
+      scoreNote.textContent = "Waiting for content.";
+      metricsEl.innerHTML = "";
+      resetFilters();
+      resultsEl.innerHTML = `<div class="empty-state"><p class="empty">Run an audit to see prioritized guideline issues, evidence snippets, and rewrite suggestions.</p></div>`;
+    });
+
+    tabs.addEventListener("click", (event) => {
+      const button = event.target.closest(".tab");
+      if (!button) return;
+      state.severity = button.dataset.filter;
+      for (const tab of tabs.querySelectorAll(".tab")) {
+        tab.classList.toggle("active", tab === button);
+      }
+      if (lastResult) renderIssues(lastResult);
+    });
+
+    issueSearch.addEventListener("input", () => {
+      state.query = issueSearch.value;
+      if (lastResult) renderIssues(lastResult);
+    });
+
+    categoryFilter.addEventListener("change", () => {
+      state.category = categoryFilter.value;
+      if (lastResult) renderIssues(lastResult);
+    });
+
+    sortIssues.addEventListener("change", () => {
+      state.sort = sortIssues.value;
+      if (lastResult) renderIssues(lastResult);
+    });
+  </script>
+</body>
+</html>
